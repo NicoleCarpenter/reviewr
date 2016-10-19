@@ -1,13 +1,12 @@
 require 'spec_helper'
 
-describe 'project index page' do
-  it 'shows all projects as links' do
+describe 'project show page' do
+  it 'has a title and a description' do
     project1 = create(:project)
-    project2 = create(:project, title: "Java Tic-Tac-Toe")
 
-    visit "/"
+    visit "/projects/" + project1.id.to_s
 
     page.has_content? project1.title
-    page.has_content? project2.title
+    page.has_content? project1.description
   end
 end
