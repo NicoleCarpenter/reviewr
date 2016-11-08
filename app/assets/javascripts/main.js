@@ -17,14 +17,14 @@ $(document).ready(function () {
 
   $("#random-rating-up").on("click", function(event) {
     event.preventDefault();
-    var id = $(this).parent().attr('data-id');
-    showRandomRatingForm(id, true);
+    var review_id = $(this).parent().attr('data-id');
+    showRandomRatingForm(review_id, path_id, true);
   });
 
   $("#random-rating-down").on("click", function(event) {
     event.preventDefault();
-    var id = $(this).parent().attr('data-id');
-    showRandomRatingForm(id, false);
+    var review_id = $(this).parent().attr('data-id');
+    showRandomRatingForm(review_id, path_id, false);
   });
 
   $("#new-rating-up").on("click", function(event) {

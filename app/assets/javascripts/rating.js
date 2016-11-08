@@ -11,14 +11,14 @@ submitNewRatingForm = function(review_id, callback) {
                   callback);
 };
 
-showRandomRatingForm = function(review_id, thumb) {
+showRandomRatingForm = function(review_id, user_id, thumb) {
   var param = addThumbParam(thumb);
   if (param == '') {
     param = "?random=true";
   } else {
     param = param + "&random=true";
   }
-  showRatingForm(review_id, param)
+  showRatingForm(review_id, user_id, param)
 };
 
 addThumbParam = function(thumb) {
@@ -32,12 +32,12 @@ addThumbParam = function(thumb) {
   return param;
 };
 
-showRatingForm = function(review_id, param) {
+showRatingForm = function(review_id, user_id, param) {
   var callback = function(response) {
     dom.displayPartial("#new-rating", response);
     dom.hideElement("#new-rating-box");
     dom.hideElement("#rating-criteria");
   };
-  client.ajaxGet("/ratings/new/" + review_id + param,
+  client.ajaxGet("/ratings/new/" + review_id + param + "&user=" + user_id,
                  callback);
 }

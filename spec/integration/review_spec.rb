@@ -20,6 +20,7 @@ describe 'review', :type => :feature do
 
     it 'loads new rating partial when thumbs up is clicked, with thumbs up preselected', :js => true do
       Capybara.ignore_hidden_elements = false
+      user = create(:user, name: 'Name', email: 'name@example.com')
       review = create(:review, content: 'Looks good!')
       project = create(:project, title: "Foo", description: "Bar")
       create(:project_review, project_id: project.id,
@@ -36,6 +37,7 @@ describe 'review', :type => :feature do
 
     it 'loads new rating partial when thumbs down is clicked, with thumbs down preselected', :js => true do
       Capybara.ignore_hidden_elements = false
+      user = create(:user, name: 'Name', email: 'name@example.com')
       review = create(:review, content: 'Looks good!')
       project = create(:project, title: "Foo", description: "Bar")
       create(:project_review, project_id: project.id,

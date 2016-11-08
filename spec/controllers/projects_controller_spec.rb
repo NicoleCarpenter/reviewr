@@ -3,39 +3,11 @@ require 'spec_helper'
 RSpec.describe ProjectsController, :type => :controller do
   render_views
 
-  describe 'GET /projects' do
-    it 'renders template for index' do
-      project1 = create(:project)
-      project2 = create(:project, title: "Java Tic-Tac-Toe")
-      review = create(:review, content: "Looks good!")
-
-      get :index
-
-      expect(response.status).to eq(200)
-      expect(response.body).to include(project1.title)
-      expect(response.body).to include(project2.title)
-    end
-
-    it 'includes a link to new project' do
-      review = create(:review, content: "Looks good!")
-
-      get :index
-
-      expect(response.body).to include('create new project')
-    end
-
-    it 'displays a random review to rate' do
-      review = create(:review, content: "Looks good!")
-      
-      get :index
-
-      expect(response.body).to render_template('reviews/_show')
-    end
-  end
-
   describe 'GET /projects/new' do
     it 'renders the template for the project new page' do
-      get :new
+      user = create(:user, name: "Name", email: "name@example.com")
+
+      get :new, params: { user: user.id }
 
       expect(response.body).to include("Title")
       expect(response.body).to include("Description")
@@ -44,7 +16,8 @@ RSpec.describe ProjectsController, :type => :controller do
 
   describe 'POST /projects/new' do
     it 'creates a new project and redirects to the project index page' do
-      post :create, params: { project: { title: 'my project', description: 'a description' } }
+      post :create, params: { project: { title: 'my project', description: 'a description' } ,
+                              user: { name: 'Name', email: 'name@example.com' } }
 
       expect(response).to redirect_to(projects_path)
       expect(response).to have_http_status(:redirect)

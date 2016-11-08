@@ -13,20 +13,23 @@ class ProjectsController < ApplicationController
 
   def new
     @project = Project.new
+    @user = User.find(params[:user])
   end
 
   def create
     project = Project.new(title: project_params[:title],
                           description: project_params[:description])
     if project.save
-      redirect_to projects_path
+      ProjectOwner.create(project_id: project.id,
+                          user_id: project_params[:user_id])
+      redirect_to user_path(project_params[:user_id])
     else
       if project.title.blank? and project.description.blank?
-        redirect_to new_project_path, { flash: { error: "Please provide a title and description" } }
+        redirect_to new_project_path(user: project_params[:user_id]), { flash: { error: "Please provide a title and description" } }
       elsif project.description.blank?
-        redirect_to new_project_path, { flash: { error: "Please provide a description" } }
+        redirect_to new_project_path(user: project_params[:user_id]), { flash: { error: "Please provide a description" } }
       else
-        redirect_to new_project_path, { flash: { error: "Please provide a title" } }
+        redirect_to new_project_path(user: project_params[:user_id]), { flash: { error: "Please provide a title" } }
       end
     end
   end
@@ -53,6 +56,6 @@ class ProjectsController < ApplicationController
   private
 
   def project_params
-    params.require(:project).permit(:title, :description)
+    params.require(:project).permit(:title, :description, :user_id)
   end
 end
