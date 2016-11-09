@@ -2,100 +2,178 @@ require 'spec_helper'
 
 describe 'review', :type => :feature do
   describe 'show page' do
-    it 'shows all ratings for a review' do
-      review = create(:review, content: 'Looks good!')
-      rating = create(:rating, helpful: true)
-      project = create(:project, title: "Foo", description: "Bar")
-      create(:project_review, project_id: project.id,
-                              review_id: review.id)
-      create(:review_rating, review_id: review.id,
+    describe 'when logged out' do
+      it 'redirects to root' do
+      end 
+    end
+
+    describe 'when logged in as a user who is not the reviewer' do
+      before(:each) do
+        OmniAuth.config.add_mock(:google_oauth2,
+                                 { uid: 'uidhillaryclinton',
+                                   info: { name: 'hillaryclinton',
+                                           email: 'hillaryclinton@email.com' } })
+        @user = User.find_by_name('hillaryclinton')
+        @review = create(:review, content: 'Looks good!')
+        project = create(:project, title: "Foo", description: "Bar")
+        reviewer = create(:user, name: 'name1',
+                                 email: 'name1@email.com',
+                                 uid: 'uidname1')
+        create(:project_review, project_id: project.id,
+                                review_id: @review.id)
+        create(:user_review, user_id: reviewer.id,
+                             review_id: @review.id)
+
+        visit "/"
+        find_link("Sign in with Google").click
+      end
+
+      it 'shows review content and link to leave rating' do
+        visit '/reviews/' + @review.id.to_s
+
+        expect(page).to have_content(@review.content)
+        expect(page).to have_xpath('//i', :class => 'fa fa-thumbs-up')
+        expect(page).to have_link('back to project')
+       end
+
+      it 'does not show ratings left by other people' do
+        rating = create(:rating, helpful: true,
+                                 explanation: 'Great!')
+        rater = create(:user, name: 'name3',
+                              email: 'name3@email.com',
+                              uid: 'uidname3')
+        create(:review_rating, review_id: @review.id,
+                               rating_id: rating.id)
+        create(:user_rating, user_id: rater.id,
                              rating_id: rating.id)
 
-      visit '/reviews/' + review.id.to_s
+        visit '/reviews/' + @review.id.to_s
 
-      expect(page).to have_content(review.content)
-      expect(page).to have_xpath('//i', :class => 'fa fa-thumbs-up')
-      expect(page).to have_link('back to project')
+        expect(page).not_to have_content(rating.explanation)
+       end
+
+      it 'does show ratings left by logged in user' do
+        rating = create(:rating, helpful: true,
+                                 explanation: 'Great!')
+        create(:review_rating, review_id: @review.id,
+                               rating_id: rating.id)
+        create(:user_rating, user_id: @user.id,
+                             rating_id: rating.id)
+
+        visit '/reviews/' + @review.id.to_s
+
+        expect(page).to have_content(rating.explanation)
+      end
+
+      it 'loads new rating partial when thumbs up is clicked, with thumbs up preselected', :js => true do
+        Capybara.ignore_hidden_elements = false
+
+        visit "/reviews/" + @review.id.to_s
+        find_by_id('new-rating-up').trigger('click')
+
+        expect(page).to have_css('form')
+        expect(page).to have_content('Rate review')
+        expect(page).to have_checked_field('rating_helpful_true')
+        expect(page).to have_button('Rate review')
+      end
+
+      it 'loads new rating partial when thumbs down is clicked, with thumbs down preselected', :js => true do
+        Capybara.ignore_hidden_elements = false
+
+        visit "/reviews/" + @review.id.to_s
+        find_by_id('new-rating-down').trigger('click')
+
+        expect(page).to have_css('form')
+        expect(page).to have_content('Rate review')
+        expect(page).to have_checked_field('rating_helpful_false')
+        expect(page).to have_button('Rate review')
+      end
     end
 
-    it 'loads new rating partial when thumbs up is clicked, with thumbs up preselected', :js => true do
-      Capybara.ignore_hidden_elements = false
-      review = create(:review, content: 'Looks good!')
-      project = create(:project, title: "Foo", description: "Bar")
-      create(:project_review, project_id: project.id,
-                              review_id: review.id)
+    describe 'when logged in as the reviewer' do
+      before(:each) do
+        OmniAuth.config.add_mock(:google_oauth2,
+                                 { uid: 'uidhillaryclinton',
+                                   info: { name: 'hillaryclinton',
+                                           email: 'hillaryclinton@email.com' } })
+        @reviewer = User.find_by_name('hillaryclinton')
+        @review = create(:review, content: 'Looks good!')
+        project = create(:project, title: "Foo", description: "Bar")
+        create(:project_review, project_id: project.id,
+                                review_id: @review.id)
+        create(:user_review, user_id: @reviewer.id,
+                             review_id: @review.id)
 
-      visit "/reviews/" + review.id.to_s
-      find_by_id('new-rating-up').trigger('click')
+        visit "/"
+        find_link("Sign in with Google").click
+      end
 
-      expect(page).to have_css('form')
-      expect(page).to have_content('Rate review')
-      expect(page).to have_checked_field('rating_helpful_true')
-      expect(page).to have_button('Rate review')
-    end
+      it 'shows all ratings for a review' do
+        review = create(:review, content: 'Looks good!')
+        rating = create(:rating, helpful: true)
+        project = create(:project, title: "Foo", description: "Bar")
+        reviewer = create(:user)
+        create(:project_review, project_id: project.id,
+                                review_id: review.id)
+        create(:review_rating, review_id: review.id,
+                               rating_id: rating.id)
+        create(:user_review, user_id: reviewer.id,
+                             review_id: review.id)
 
-    it 'loads new rating partial when thumbs down is clicked, with thumbs down preselected', :js => true do
-      Capybara.ignore_hidden_elements = false
-      review = create(:review, content: 'Looks good!')
-      project = create(:project, title: "Foo", description: "Bar")
-      create(:project_review, project_id: project.id,
-                              review_id: review.id)
+        visit '/reviews/' + review.id.to_s
 
-      visit "/reviews/" + review.id.to_s
-      find_by_id('new-rating-down').trigger('click')
+        expect(page).to have_content(review.content)
+        expect(page).to have_xpath('//i', :class => 'fa fa-thumbs-up')
+        expect(page).to have_link('back to project')
+      end
+     
+      it 'shows all ratings in reverse chronological order' do
+        review = create(:review, content: 'Looks good!')
+        rating1 = create(:rating, helpful: true, explanation: 'Nice')
+        rating2 = create(:rating, helpful: false, explanation: 'Not specific')
+        project = create(:project, title: "Foo", description: "Bar")
+        create(:project_review, project_id: project.id,
+                                review_id: review.id)
+        create(:review_rating, review_id: review.id,
+                               rating_id: rating1.id)
+        create(:review_rating, review_id: review.id,
+                               rating_id: rating2.id)
 
-      expect(page).to have_css('form')
-      expect(page).to have_content('Rate review')
-      expect(page).to have_checked_field('rating_helpful_false')
-      expect(page).to have_button('Rate review')
-    end
-    
-    it 'shows all ratings in reverse chronological order' do
-      review = create(:review, content: 'Looks good!')
-      rating1 = create(:rating, helpful: true, explanation: 'Nice')
-      rating2 = create(:rating, helpful: false, explanation: 'Not specific')
-      project = create(:project, title: "Foo", description: "Bar")
-      create(:project_review, project_id: project.id,
-                              review_id: review.id)
-      create(:review_rating, review_id: review.id,
-                             rating_id: rating1.id)
-      create(:review_rating, review_id: review.id,
-                             rating_id: rating2.id)
+        visit '/reviews/' + review.id.to_s
+        
+        expect(page.body.index('Nice')).to be > page.body.index('Not specific')
+      end
 
-      visit '/reviews/' + review.id.to_s
-      
-      expect(page.body.index('Nice')).to be > page.body.index('Not specific')
-    end
+      it 'loads partial to edit the review populated with the review content', :js => true do
+        project = create(:project, title: 'my title', description: 'my desc')
+        review = create(:review, content: 'Looks good!')
+        create(:project_review, project_id: project.id,
+                                review_id: review.id)
 
-    it 'loads partial to edit the review populated with the review content', :js => true do
-      project = create(:project, title: 'my title', description: 'my desc')
-      review = create(:review, content: 'Looks good!')
-      create(:project_review, project_id: project.id,
-                              review_id: review.id)
+        visit '/reviews/' + review.id.to_s
+        find_by_id('edit-review-link').trigger('click')
 
-      visit '/reviews/' + review.id.to_s
-      find_by_id('edit-review-link').trigger('click')
+        expect(page).to have_content('Update review')
+        expect(current_path).to eq('/reviews/' + review.id.to_s)
+      end
 
-      expect(page).to have_content('Update review')
-      expect(current_path).to eq('/reviews/' + review.id.to_s)
-    end
+      xit 'navigates to the project page when the back link is clicked' do
+        project = create(:project, title: 'my title', description: 'my desc')
+        review = create(:review, content: 'Looks good!')
+        create(:project_review, project_id: project.id,
+                                review_id: review.id)
 
-    it 'navigates to the project page when the back link is clicked' do
-      project = create(:project, title: 'my title', description: 'my desc')
-      review = create(:review, content: 'Looks good!')
-      create(:project_review, project_id: project.id,
-                              review_id: review.id)
+        visit '/reviews/' + review.id.to_s
+        click_link('back to project')
 
-      visit '/reviews/' + review.id.to_s
-      click_link('back to project')
-
-      expect(page).to have_content(project.title)
-      expect(current_path).to eq('/projects/' + project.id.to_s)
+        expect(page).to have_content(project.title)
+        expect(current_path).to eq('/projects/' + project.id.to_s)
+      end
     end
   end
 
   describe 'new page' do
-    it 'redirects to the project show page when a review is submitted' do
+    xit 'redirects to the project show page when a review is submitted' do
       project = create(:project, title: 'my title', description: 'my desc')
 
       visit '/projects/' + project.id.to_s
@@ -107,7 +185,7 @@ describe 'review', :type => :feature do
       expect(page).to have_content('my review')
     end
 
-    it 'displays a warning if content is left blank when creating a new review', :js => true do
+    xit 'displays a warning if content is left blank when creating a new review', :js => true do
       project = create(:project, title: 'my title', description: 'my desc')
 
       visit '/projects/' + project.id.to_s
@@ -119,7 +197,7 @@ describe 'review', :type => :feature do
       expect(current_path).to eq('/projects/' + project.id.to_s)
     end
 
-    it 'redirects back to the project show page when cancel link is clicked', :js => true do
+    xit 'redirects back to the project show page when cancel link is clicked', :js => true do
       project = create(:project, title: 'my title', description: 'my desc')
 
       visit '/projects/' + project.id.to_s

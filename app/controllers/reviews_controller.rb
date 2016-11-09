@@ -53,12 +53,20 @@ class ReviewsController < ApplicationController
 
   def show
     @review = Review.find(params[:id])
-    @ratings = @review.ratings.order(updated_at: :desc)
-    @rating = Rating.new
-    @project = @review.project
-    @update = params[:update]
-    if @update == "success"
-      flash.now[:notice] = "Review has been updated"
+    if session[:user_id].nil?
+      redirect_to root_path
+    else 
+      if session[:user_id] == @review.user.id
+        @ratings = @review.ratings.order(updated_at: :desc)
+      else
+        @ratings = @review.ratings.where(user: session[:user_id]).order(updated_at: :desc)
+      end
+      @rating = Rating.new
+      @project = @review.project
+      @update = params[:update]
+      if @update == "success"
+        flash.now[:notice] = "Review has been updated"
+      end
     end
   end
 

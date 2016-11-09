@@ -7,12 +7,21 @@ class ProjectsController < ApplicationController
 
   def show
     @project = Project.find_by_id(params[:id])
-    @reviews = @project.reviews.order(updated_at: :desc)
-    @review = Review.new
+    if session[:user_id].nil?
+      redirect_to root_path
+    elsif session[:user_id] != @project.owner.id
+      redirect_to user_path(session[:user_id])
+    else
+      @reviews = @project.reviews.order(updated_at: :desc)
+      @review = Review.new
+    end
   end
 
   def new
     @project = Project.new
+    if session[:user_id].nil?
+      redirect_to root_path
+    end
   end
 
   def create
@@ -33,6 +42,12 @@ class ProjectsController < ApplicationController
 
   def edit
     @project = Project.find_by_id(params[:id])
+    if session[:user_id].nil?
+      redirect_to root_path
+    elsif session[:user_id] != @project.owner.id
+      redirect_to user_path(session[:user_id])
+    else
+    end
   end
 
   def update
