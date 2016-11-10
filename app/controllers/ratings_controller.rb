@@ -20,6 +20,8 @@ class RatingsController < ApplicationController
     if rating.save
       review_rating = ReviewRating.create(review_id: rating_params[:review_id],
                                           rating_id: rating.id)
+      user_rating = UserRating.create(user_id: session[:user_id],
+                                      rating_id: rating.id)
       if request.xhr?
         render :js => "if (window.location.pathname == '#{root_path}') {
                          url.redirectToURI('#{root_path}');
