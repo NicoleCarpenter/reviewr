@@ -34,7 +34,16 @@ RSpec.describe ProjectsController, :type => :controller do
   end
 
   describe 'GET /projects/new' do
-    it 'renders the template for the project new page' do
+    it 'redirects to root if not logged in' do
+      get :new
+
+      expect(response).to have_http_status(:redirect)
+    end
+
+    it 'renders the template for the project new page if logged in' do
+      user = create(:user)
+      session[:user_id] = user.id 
+
       get :new
 
       expect(response.body).to include("Title")
@@ -66,8 +75,39 @@ RSpec.describe ProjectsController, :type => :controller do
   end
 
   describe 'GET /projects/:id' do
-    it 'renders the template for the project show page' do
+    it 'redirects to root if you are not logged in' do
       project = create(:project)
+
+      get :show, params: { id: project.id }
+
+      expect(response).to have_http_status(:redirect)
+    end
+
+    it 'redirects to root if you are not logged in as the owner' do
+      project = create(:project)
+      owner = create(:user, name: 'name1',
+                            email: 'name1@email.com',
+                            uid: 'uidname1')
+      user = create(:user, name: 'name2',
+                           email: 'name2@email.com',
+                           uid: 'uidname2')
+      create(:project_owner, project_id: project.id,
+                             user_id: owner.id)
+      session[:user_id] = user.id
+
+      get :show, params: { id: project.id }
+
+      expect(response).to have_http_status(:redirect)
+    end
+      
+    it 'renders the template for the project show page when logged in as the owner' do
+      project = create(:project)
+      owner = create(:user, name: 'name',
+                            email: 'name@email.com',
+                            uid: 'uidname')
+      create(:project_owner, project_id: project.id,
+                             user_id: owner.id)
+      session[:user_id] = owner.id
 
       get :show, params: { id: project.id }
 
@@ -76,8 +116,14 @@ RSpec.describe ProjectsController, :type => :controller do
       expect(response.body).to include(project.description)
     end
 
-    it 'includes reviews associated with the project' do
+    it 'includes reviews associated with the project when logged in as the owner' do
       project = create(:project)
+      owner = create(:user, name: 'name',
+                            email: 'name@email.com',
+                            uid: 'uidname')
+      create(:project_owner, project_id: project.id,
+                             user_id: owner.id)
+      session[:user_id] = owner.id
       review1 = create(:review, content: "Looks good!")
       review2 = create(:review, content: "Huh?")
       create(:project_review, project_id: project.id,
@@ -91,8 +137,14 @@ RSpec.describe ProjectsController, :type => :controller do
       expect(response.body).to include(review2.content)
     end
 
-    it 'includes a link to edit the project' do
+    it 'includes a link to edit the project when logged in as the owner' do
       project = create(:project)
+      owner = create(:user, name: 'name',
+                            email: 'name@email.com',
+                            uid: 'uidname')
+      create(:project_owner, project_id: project.id,
+                             user_id: owner.id)
+      session[:user_id] = owner.id
 
       get :show, params: { id: project.id }
 
@@ -101,8 +153,37 @@ RSpec.describe ProjectsController, :type => :controller do
   end
 
   describe 'GET /projects/:id/edit' do
-    it 'renders the template for the project edit page' do
+    it 'redirects when not logged in' do
       project = create(:project)
+      
+      get :edit, params: { id: project.id }
+
+      expect(response).to have_http_status(:redirect)
+    end
+
+    it 'redirects when logged in as user who is not project owner' do
+      project = create(:project)
+      owner = create(:user, name: 'name1',
+                            email: 'name1@email.com',
+                            uid: 'uidname1')
+      user = create(:user, name: 'name2',
+                           email: 'name2@email.com',
+                           uid: 'uidname2')
+      create(:project_owner, project_id: project.id,
+                             user_id: owner.id)
+      session[:user_id] = user.id
+
+      get :edit, params: { id: project.id }
+
+      expect(response).to have_http_status(:redirect)
+    end
+
+    it 'renders the template for the project edit page when logged in as the project owner' do
+      project = create(:project)
+      owner = create(:user)
+      create(:project_owner, project_id: project.id,
+                             user_id: owner.id)
+      session[:user_id] = owner.id
 
       get :edit, params: { id: project.id }
 
@@ -146,5 +227,4 @@ RSpec.describe ProjectsController, :type => :controller do
       expect(flash[:error]).to match("Please provide a title")
     end
   end
-
 end
